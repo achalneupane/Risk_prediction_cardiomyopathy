@@ -1,150 +1,84 @@
-# Risk Prediction for Cardiomyopathy in Childhood Cancer Survivors
+# Cardiomyopathy Risk Prediction in Childhood Cancer Survivors
 
-This repository contains R scripts and data used to evaluate and visualize cumulative incidence of cardiomyopathy among survivors of childhood cancer using both **IGHG-based** and **Model 13-based** risk stratification. The analyses leverage data from two major survivor cohorts: **St. Jude Lifetime Cohort (SJLIFE)** and **Childhood Cancer Survivor Study (CCSS)**.
+This repository contains R scripts and supporting files for reproducing the statistical analyses and visualizations presented in the manuscript:
+
+**Citation:**
+
+> K. Petrykey, Y. Chen, A. Neupane, J.N. French, H. Wang, H. Xiang, S.B. Dixon, C. Vukadinovich, C. Im, M.J. Ehrhardt, D.A. Mulrooney, N. Sharafeldin, X. Wang, R.M. Howell, J.L. Jefferies, P.W. Burridge, K.C. Oeffinger, M.M. Gramatges, S. Bhatia, L.L. Robison, K.K. Ness, M.M. Hudson, E.J. Chow, G.T. Armstrong, Y. Yasui, Y. Sapkota. *Predicting the 10-year risk of cardiomyopathy in long-term survivors of childhood cancer*, Annals of Oncology, 2025.
 
 ## Overview
 
-The central aim is to assess risk prediction of cardiomyopathy using:
+This analysis focuses on evaluating and calibrating predictive models of cardiomyopathy risk using data from two major cohorts:
 
-* IGHG (International Guideline Harmonization Group) clinical risk groups
-* A multivariable model (Model 13) incorporating clinical and genetic predictors, including polygenic risk scores (PRSs)
+* **St. Jude Lifetime Cohort (SJLIFE)**
+* **Childhood Cancer Survivor Study (CCSS)**
 
-Cumulative incidence functions (CIFs) are estimated and compared across risk strata using competing risks methodology.
-
----
+The objective is to predict the 10-year risk of cardiomyopathy in long-term childhood cancer survivors using a Fine-Gray competing risk model framework. The models incorporate clinical risk factors, genetic predictors (polygenic risk scores), and ancestry.
 
 ## Repository Structure
 
-### Key Scripts
+* `model_calibration_revised.R`: Generates calibration plots for Model 13 (final model with 2 PRSs).
+* `AUC_overall.R`: Plots area under the curve (AUC) estimates with 95% confidence intervals and p-values across models.
+* `figure_2_all_new_13.xlsx`: Contains predicted estimates, true events, and identifiers for SJLIFE and CCSS.
+* `AUC_final_model_with_race.txt`: AUC data for each model across cohorts.
 
-* `cumulative_incidence_Model4_race.R`: Main script for cumulative incidence analysis and visualization.
+## Methods and Statistical Analysis
 
-### Input Data Files
+### 1. **Model Development**
 
-* `cum_df.csv`: Clinical and genetic data for individuals including event status, risk group, and source (SJLIFE or CCSS).
-* `figure_2_all_CV_FULL.xlsx`: Contains Model 13 prediction outputs including estimated cardiomyopathy risk.
-* `follow_years.csv`: Contains follow-up years per individual used for rate adjustment.
+* Fine-Gray subdistribution hazard model was used to estimate 10-year cumulative incidence functions (CIFs) for cardiomyopathy, accounting for death as a competing risk.
+* Predictors were selected based on clinical relevance and prior evidence. These included:
 
----
+  * Demographic and treatment factors
+  * Hypertension status
+  * Genetic ancestry
+  * Two polygenic risk scores (PRS): derived from published GWAS
 
-## Analysis Workflow
+### 2. **Calibration Analysis** (`model_calibration_revised.R`)
 
-### 1. Setup
+* Each individual’s predicted 10-year cardiomyopathy risk was transformed as `1 - exp(-pred_est)` to estimate CIF.
+* Individuals were grouped into deciles based on predicted probability.
+* Within each decile, the observed proportion of cardiomyopathy events (`eve_Cardiomyopathy`) was calculated.
+* A scatter plot of predicted vs. observed probabilities was created.
+* Overlay includes a 45° line (perfect calibration).
 
-The script automatically detects the OS and sets the working directory:
+### 3. **Discrimination (AUC) Analysis** (`AUC_overall.R`)
 
-```r
-if (as.character(Sys.info()['sysname']) == "Windows"){
-  root = 'Z:/ResearchHome/' # Windows path
-} else {
-  root = '/Volumes/' # Mac path
-}
-setwd(paste0(root, '/Revised'))
+* Area under the ROC curve (AUC) was computed for each model.
+* AUC estimates and 95% confidence intervals were plotted for each cohort (SJLIFE and CCSS).
+* P-values for pairwise comparisons between sequential models were annotated.
+* Models include combinations of clinical variables, age, hypertension, ancestry, and PRSs.
+
+### 4. **Statistical Tools**
+
+* Plots were generated using `ggplot2`, `ggprism`, and `patchwork`.
+* Calibration used quantile-based binning.
+* Discrimination was evaluated using logistic regression-based AUC estimation with paired p-values.
+
+## Output
+
+* `Model_calibration_plots_revised_based_on_YS.pdf`: Calibration plots for CCSS cohort.
+* `AUC_overall_with_race.pdf`: Discrimination plot comparing model performance.
+
+## Required R Packages
+
+```R
+install.packages(c("tidyr", "readxl", "ggplot2", "CalibrationCurves", "rms", "ggprism", "patchwork", "magrittr", "dplyr"))
 ```
 
-### 2. Loading Required Packages
+## How to Run
 
-Key R packages used:
+1. Set the working directory appropriately depending on your OS:
 
-* `tidycmprsk`, `survival`, `ggsurvfit`, `survminer`: Competing risks analysis and Kaplan-Meier style visualization.
-* `ggplot2`, `dplyr`, `stringr`, `readr`, `readxl`: Data wrangling and plotting.
-* `gridExtra`: For combining plots.
-
-### 3. Data Integration
-
-* Merges `cum_df.csv`, model output (`figure_2_all_CV_FULL.xlsx`), and follow-up times (`follow_years.csv`) by unique subject ID (`sjlid`).
-* Calculates predicted risk per year:
-
-  ```r
-  final_model$pred_est_wo_offset = final_model$pred_est / final_model$follow_years
-  ```
-
-### 4. Risk Stratification
-
-Two types of risk groups are created:
-
-* **IGHG-based risk groups**: Clinically assigned groups labeled as Low, Moderate, High.
-* **Model 13-based risk groups**: Assigned based on predicted risk per year:
-
-  * High: >0.1
-  * Low: <0.05
-  * Moderate: Between 0.05 and 0.1
-
-### 5. Competing Risk Analysis
-
-* Uses `tidycmprsk::cuminc()` to estimate cumulative incidence with death as a competing risk.
-* Events are defined in variable `ci_even` and time is in `years`.
-
-### 6. Stratified Analyses
-
-Analyses are performed separately by cohort:
-
-* **SJLIFE (`source == "stjd"`)**
-* **CCSS (`source == "ccss"`)**
-
-For each cohort:
-
-* CIFs are plotted across both IGHG and Model 13 risk groups
-* `ggcuminc()` used for plotting with:
-
-  * Risk tables
-  * Confidence intervals
-  * Log-rank p-values
-  * Color, linetype, and fill aesthetics for group comparison
-
----
-
-## Output Figures
-
-Four cumulative incidence plots are saved as `.png` files:
-
-| Plot Description                    | Output File Name       |
-| ----------------------------------- | ---------------------- |
-| IGHG-based risk groups (SJLIFE)     | `cif_ighg_sjlife.png`  |
-| IGHG-based risk groups (CCSS)       | `cif_ighg_ccss.png`    |
-| Model 13-based risk groups (SJLIFE) | `cif_model_sjlife.png` |
-| Model 13-based risk groups (CCSS)   | `cif_model_ccss.png`   |
-
-All figures are saved at 300 DPI, 7.5x7 inches, and include risk tables and annotations.
-
----
-
-## Statistical Details
-
-### Competing Risk Model
-
-* CIF estimated using `tidycmprsk::cuminc()`, based on Fine-Gray subdistribution hazards.
-* Competing risk: Non-cardiomyopathy death
-* Formula: `Surv(years, as.factor(ci_even)) ~ group`
-
-### Risk Group Comparison
-
-* Cumulative incidence curves are compared across IGHG and Model 13 groups.
-* `add_pvalue()` adds p-value from Gray’s test comparing cumulative incidence curves across groups.
-
----
-
-## Requirements
-
-### R version
-
-Tested on R 4.3.0+
-
-### Required packages
-
-```r
-install.packages(c("survival", "survminer", "ggplot2", "dplyr", "readr", "readxl", "stringr", "gridExtra", "ggsurvfit"))
-# From CRAN or GitHub:
-remotes::install_github("ddsjoberg/tidycmprsk")
-```
-
----
+   * Windows: `Z:/ResearchHome/`
+   * macOS: `/Volumes/`
+2. Run `model_calibration_revised.R` to generate calibration plots.
+3. Run `AUC_overall.R` to generate AUC plots.
 
 ## Notes
 
-* IGHG group assignment is mapped from categorical variable `gp`
-* Model 13 groups are based on a fixed cutoff of predicted cardiomyopathy risk
-* Individuals with `gp == 4` are excluded
-* Both `sjlid` and `ccssid` IDs are used for merging datasets
+* `Model_13` refers to the final model used in the manuscript.
+* Some files (e.g., `figure_2_all_new_13.xlsx`) are cohort-specific and must be accessible in the working directory.
+* For confidentiality, sensitive data must be handled following IRB guidelines.
 
 ---
