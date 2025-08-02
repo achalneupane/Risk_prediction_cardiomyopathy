@@ -1,10 +1,7 @@
 # Cardiomyopathy Risk Prediction in Childhood Cancer Survivors
 
-his repository contains R scripts and supporting files for reproducing the statistical analyses and visualizations presented in our publication: [Predicting the 10-year risk of cardiomyopathy](https://www.sciencedirect.com/science/article/pii/S0923753425007689)
+This repository contains R scripts and supporting files for reproducing the statistical analyses and visualizations presented in our publication: [Predicting the 10-year risk of cardiomyopathy](https://www.sciencedirect.com/science/article/pii/S0923753425007689)
 
-**Citation:**
-
-> K. Petrykey, Y. Chen, A. Neupane, J.N. French, H. Wang, H. Xiang, S.B. Dixon, C. Vukadinovich, C. Im, M.J. Ehrhardt, D.A. Mulrooney, N. Sharafeldin, X. Wang, R.M. Howell, J.L. Jefferies, P.W. Burridge, K.C. Oeffinger, M.M. Gramatges, S. Bhatia, L.L. Robison, K.K. Ness, M.M. Hudson, E.J. Chow, G.T. Armstrong, Y. Yasui, Y. Sapkota. *Predicting the 10-year risk of cardiomyopathy in long-term survivors of childhood cancer*, Annals of Oncology, 2025.
 
 ## Overview
 
@@ -19,57 +16,54 @@ A Fine-Gray subdistribution hazard model framework is used to estimate cumulativ
 
 ### 1. `prepare_sjlife_data.R`
 
-Preprocesses SJLIFE phenotype, treatment, and clinical covariate data. It derives relevant variables (e.g., cardiomyopathy status, time-to-event) and formats them for model input.
+Preprocesses SJLIFE phenotype, treatment, and clinical covariate data. It derives variables for cardiomyopathy onset, censoring time, treatment exposure (anthracycline dose, radiation), hypertension, obesity, diabetes, and dyslipidemia.
 
 ### 2. `prepare_genetic_data_sjlife_ccss.R`
 
-Cleans and merges genotype data (e.g., PRSs, ancestry PCs) with the clinical dataset for both cohorts. Filters variants, standardizes PRS scores, and annotates ancestry.
+Merges genotype data including ancestry principal components and standardized polygenic risk scores (PRSs) with clinical data. It harmonizes identifiers across cohorts and filters for high-quality variants.
 
 ### 3. `modeling_with_CVRF_dyslip_htn_obesity_t2d_revised_v2_grade2_included_revised_baseline.R`
 
-Performs the Fine-Gray competing risks regression models. It fits multiple models:
+Fits Fine-Gray competing risks models for cardiomyopathy risk using clinical and genetic covariates. This includes:
 
-* Model 1: Clinical risk factors only
-* Model 4: Adds hypertension
-* Model 13: Final model with ancestry and 2 PRSs
-  Includes model coefficients, baseline hazard estimation, and output for further analysis.
+* Clinical-only models
+* Models with cardiometabolic risk factors
+* Models with PRS and ancestry
+  Outputs include model coefficients, subdistribution hazard ratios (sHRs), and baseline hazards.
 
 ### 4. `cumulative incidence.R`
 
-Generates CIFs for each model using the predicted linear predictors. These functions are then used to estimate individual 10-year risks.
+Calculates cumulative incidence functions using fitted Fine-Gray models. Outputs predicted 10-year risk for each individual using linear predictors.
 
 ### 5. `cumulative incidence_YS.R`
 
-Revised version of CIF computation including Yutaka’s modifications for robustness. May adjust baseline hazards or handling of censored events.
+Refined implementation that improves estimation of CIFs and adjusts for edge cases. Includes sensitivity to baseline hazards.
 
 ### 6. `cumulative incidence_YS_Model4_race.R`
 
-Calculates CIFs for Model 4 stratified by race. Allows visualization of differential cardiomyopathy risk across racial groups.
+Generates stratified CIFs based on race for Model 4 (clinical + hypertension). Assesses racial disparities in predicted cardiomyopathy risk.
 
 ### 7. `model_calibration_revised.R`
 
-Groups participants into risk deciles based on predicted CIFs from Model 13, then compares observed and predicted event rates. Generates calibration plots.
+Assesses model calibration by grouping survivors into deciles of predicted risk and comparing observed vs predicted 10-year cumulative incidence. Includes Hosmer–Lemeshow-type plots and calibration curves.
 
 ### 8. `AUC_overall.R`
 
-Estimates AUC and 95% CI for each model in both SJLIFE and CCSS cohorts using logistic regression. Includes statistical tests comparing AUCs across models.
+Computes model discrimination (AUC) using ROC curves and DeLong’s test to compare AUCs across models. Produces overall and cohort-specific estimates.
 
 ### 9. `IGHG_based_analysis.R`, `IGHG_based_analysis_revised.R`, `IGHG_based_analysis_revised_with_prs.R`
 
-Performs sensitivity analyses in participants with IGHG risk profiles:
-
-* Compares models with and without PRSs
-* Focuses on high genetic-risk subgroups
+Subset analysis for individuals with known immunoglobulin heavy chain gene (IGHG) variants. Tests impact of PRSs and ancestry on model performance within this genetic subgroup.
 
 ### 10. `PRS_distribution.R`
 
-Visualizes the distribution of PRSs across cohorts and race groups. Useful for assessing genetic variability and checking for batch effects or confounding.
+Plots distribution of PRSs across ancestry groups and cohorts (SJLIFE, CCSS). Includes density plots, boxplots, and statistical comparisons (e.g., Wilcoxon rank-sum test).
 
 ## Output Files
 
-* `Model_calibration_plots.pdf` and `Model_calibration_plots_revised_based_on_YS.pdf`: Calibration plots for various models and cohort strata.
-* `AUC_overall.pdf`: AUC plot comparing model discrimination performance.
-* `figure_2_all_new_13.xlsx`: Tabulated risk estimates, events, cohort identifiers used in Figure 2.
+* `Model_calibration_plots.pdf`, `Model_calibration_plots_revised_based_on_YS.pdf`: Visualizations of predicted vs observed risk.
+* `AUC_overall.pdf`: ROC and AUC comparison plots across models.
+* `figure_2_all_new_13.xlsx`: Data behind primary figure showing risk distribution and outcomes.
 
 ## Methods and Statistical Analysis
 
