@@ -1,5 +1,5 @@
 rm(list=ls())
-setwd("/Volumes/clusterhome/ysapkota/Work/Manuscripts/Cardiomyopathy_PRS/FINAL/Revised_analysis/")
+setwd("Work/Manuscripts/Cardiomyopathy_PRS/FINAL/Revised_analysis/")
 library(ggplot2)
 # install.packages('patchwork')
 library(ggprism)
